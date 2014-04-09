@@ -7,13 +7,14 @@ module APNS
   SANDBOX_GATEWAY = 'gateway.sandbox.push.apple.com'
 
   class Client
-    attr_accessor :host, :port, :pem, :pass
+    attr_accessor :host, :port, :pem, :pass, :connect_timeout
 
     def initialize(pem, options={})
       defaults = {
         :pass => nil,
         :host => APNS::LIVE_GATEWAY,
         :port => 2195,
+        :connect_timeout => nil,
       }
       options = defaults.merge(options)
 
@@ -21,6 +22,7 @@ module APNS
       self.pass = options[:pass]
       self.host = options[:host]
       self.port = options[:port]
+      self.connect_timeout = options[:connect_timeout]
     end
 
     def send_notification(device_token, message)
@@ -81,7 +83,7 @@ module APNS
       context.cert = OpenSSL::X509::Certificate.new(File.read(self.pem))
       context.key  = OpenSSL::PKey::RSA.new(File.read(self.pem), self.pass)
 
-      sock         = TCPSocket.new(self.host, self.port)
+      sock         = Socket.tcp(self.host, self.port, opts={connect_timeout: self.connect_timeout})
       ssl          = OpenSSL::SSL::SSLSocket.new(sock,context)
       ssl.connect
 
@@ -99,7 +101,7 @@ module APNS
       fhost = self.host.gsub('gateway','feedback')
       puts fhost
 
-      sock         = TCPSocket.new(fhost, 2196)
+      sock         = Socket.tcp(fhost, 2196, opts={connect_timeout: self.connect_timeout})
       ssl          = OpenSSL::SSL::SSLSocket.new(sock,context)
       ssl.connect
 
